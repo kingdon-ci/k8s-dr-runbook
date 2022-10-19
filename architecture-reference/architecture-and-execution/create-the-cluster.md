@@ -80,7 +80,7 @@ We needed to know that we could delete and recreate clusters smoothly in order t
 Supercut - Disaster Recovery in Staging with FluxCD
 {% endembed %}
 
-We've got this supercut that shows the whole thing in under 45 seconds, but it should be clear from watching that this is a non-trivial cluster with more than just a handful of demo-app services and production-targeted services across a wide variety of Cloud Native vendors and projects.
+We've got this supercut that shows the whole thing in about 60 seconds, but it should be clear from watching that this is a non-trivial cluster with more than just a handful of demo-app services and production-targeted services across a wide variety of Cloud Native vendors and projects.
 
 VCluster was absolutely perfect for our Home Lab's "Production" services, (or better call it "Staging" – but services that we care about!)
 
