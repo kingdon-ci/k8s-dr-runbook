@@ -24,7 +24,7 @@ In the terraform plan linked above, there are (`aks-cluster-1.tf`, `aks-cluster-
 
 It is mostly derived from the [Provision an AKS Cluster guide](https://learn.hashicorp.com/tutorials/terraform/aks) provided by Hashicorp Learn.
 
-**The \_resource group**\_\*\* is configured to\*\* [**prevent destroy**](https://github.com/kingdonb/learn-terraform-provision-aks-cluster/blob/8e11ac597a91296a5ed5c1943c4787c5be02601d/azure-rg.tf#L7-L9)**,** which could be important later on. (_Hint:_ since our persistent volumes are in a resource group, destroying the resource group could wipe the persistent volume data and even snapshot data, making DR even just a bit more difficult.)
+**The _resource group_** is configured to [**prevent destroy**](https://github.com/kingdonb/learn-terraform-provision-aks-cluster/blob/8e11ac597a91296a5ed5c1943c4787c5be02601d/azure-rg.tf#L7-L9), which could be important later on. (_Hint:_ since our persistent volumes are in a resource group, destroying the resource group could wipe the persistent volume data and even snapshot data, making DR even just a bit more difficult.)
 
 This document will not go in-depth about the cluster creation workflow itself, since it is covered elsewhere, other than to present it as a brief video supercut which will soon be posted here:
 
