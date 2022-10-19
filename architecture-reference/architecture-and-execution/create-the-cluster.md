@@ -82,15 +82,19 @@ Supercut - Disaster Recovery in Staging with FluxCD
 
 We've got this supercut that shows the whole thing in under 45 seconds, but it should be clear from watching that this is a non-trivial cluster with more than just a handful of demo-app services and production-targeted services across a wide variety of Cloud Native vendors and projects.
 
-VCluster was absolutely perfect for our Home Lab's "Production" and "Staging" instances.
+VCluster was absolutely perfect for our Home Lab's "Production" services, (or better call it "Staging" – but services that we care about!)
 
-We can allow our child clusters [pass-through access to the storage class](https://www.vcluster.com/docs/architecture/storage#sync-persistent-volumes) in our "Production" kubeadm cluster, syncing persistent volumes they create to the parent cluster and permitting privileged access to the physical nodes, so pet clusters can create persistent volumes with a `hostPath` (or we can prohibit all of that, but for our purposes it's exactly what we need.)
+We can allow our child clusters [pass-through access to the storage class](https://www.vcluster.com/docs/architecture/storage#sync-persistent-volumes) in our "Production" kubeadm cluster, syncing persistent volumes they create to the parent cluster and permitting privileged access to the physical nodes, so pet clusters can create persistent volumes with a `hostPath` (or we can prohibit all of that, but) for our purposes the pass-through behavior is exactly what we needed.
+
+We can use a host cluster to approximate the behavior of a Resource Group or cloud tenant account, so persistent volumes that get used on a tenant (VCluster or cloud-based cluster) can outlive our cluster.
+
+When your clusters need to be created and destroyed, they may have different lifecycles than the apps and data they hosted. Through careful planning you can avoid the need to restore from backups.
 
 ### All Together
 
 We had enough physical nodes for one cluster, but we needed that cluster to host persistent services like database and authentication, services that provide service to other clusters with varying service levels of their own, making frequent tear-down and recreation of the entire cluster in our Home Lab an impractical target.
 
-But now we can simulate a close approximation.
+But now we can simulate a close approximation of a singular type of catastrophe which can have befallen our clusters: accidental deletion.
 
 The VCluster "Staging" pet has persistent storage that's linked to the parent "Production" cluster, and when our "Staging" cluster goes down, any volume definitions are expected to be retained on the parent cluster unless their reclaim policy was set to `Delete` (but there will be more on retention and the reclaim policy when we get to [Persistent Data with Helm](persistent-volumes/persistent-data-with-helm.md), later on in the guide!)
 
@@ -124,7 +128,13 @@ We can run `flux bootstrap github` manually, or we can use the Terraform provide
 
 While the [terraform provider](https://github.com/fluxcd/terraform-provider-flux) is developed in a separate repository than the `flux` CLI, it implements basically the same workflow and either works well.
 
-If you aren't using terraform, just use `flux bootstrap` instead, as the result won't be any different. The advantage using Terraform is that we can just as easily provision three clusters using Flux provider to bootstrap each, all in the same Git repository or in separate repositories.
+One caveat which has been highlighted is that `terraform-provider-flux` has some difficulty patching resources. As of this writing, for now at least, only Flux can patch `flux-system/` with the `kustomization.yaml` contained in there. Terraform used to install Flux will run unpatched Flux in the cluster first, it does not have the same pre-patching capability as `flux bootstrap` in the CLI.
+
+So: once Flux is running, it can patch itself with any service accounts that are needed for KMS secrets, but if you need a KMS secret to decrypt the deploy key then you are in trouble with Terraform. I have not found an elegant way around this, other than a public bootstrap repo.
+
+Making your bootstrap repo public is problematic for other reasons. We only recommend public bootstrap repos for demos. If you are bootstrapping real infrastructure, then you should use a private Git repository to mitigate the risk of compromising secrets accidentally committed.
+
+If you aren't using terraform, just use `flux bootstrap` instead, as the result won't be any different. The main advantage using Terraform is that we can just as easily provision three clusters using Flux provider to bootstrap each, all in the same Git repository or in separate repositories. We don't need to run three separate steps, we can ideally just use one configuration and `terraform apply` once for all clusters.
 
 We will quickly bootstrap three clusters in different regions with the Flux terraform provider.
 
