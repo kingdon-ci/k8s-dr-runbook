@@ -18,7 +18,7 @@ We will start with the Production cluster as a target: for this guide, we have c
 
 There are a few **Terraform resources to be aware of**, and a few directives to know that may have an outsized impact later, so let's have a look at the [example (straw-man) Production environment](https://github.com/kingdonb/learn-terraform-provision-aks-cluster)!
 
-\[TODO: Video tour of Production, with instance workloads running on it – three clusters in three regions with resource groups and persistent volumes provisioned from AKS, acros each region.]
+\[TODO: Video tour of Production, with instance workloads running on it – three clusters in three regions with resource groups and persistent volumes provisioned from AKS, across each region.]
 
 In the terraform plan linked above, there are (`aks-cluster-1.tf`, `aks-cluster-2.tf`, `aks-cluster-3.tf`) AKS clusters in three regions, and (`azure-rg.tf`) resource groups that host a cluster in each region. We use a [SystemAssigned Identity](https://github.com/kingdonb/learn-terraform-provision-aks-cluster/blob/8e11ac597a91296a5ed5c1943c4787c5be02601d/aks-cluster-1.tf#L22-L24) and have [enabled auto-scaling](https://github.com/kingdonb/learn-terraform-provision-aks-cluster/blob/8e11ac597a91296a5ed5c1943c4787c5be02601d/aks-cluster-1.tf#L12-L14) on our clusters, and there is almost nothing else notable about this Terraform AKS cluster configuration.
 
@@ -26,7 +26,7 @@ It is mostly derived from the [Provision an AKS Cluster guide](https://learn.has
 
 **The **_**resource group**_** is configured to** [**prevent destroy**](https://github.com/kingdonb/learn-terraform-provision-aks-cluster/blob/8e11ac597a91296a5ed5c1943c4787c5be02601d/azure-rg.tf#L7-L9)**,** which could be important later on. (_Hint:_ since our persistent volumes are in a resource group, destroying the resource group could wipe the persistent volume data and even snapshot data, making DR even just a bit more difficult.)
 
-This document will not go in-depth about the cluster creation workflow itself, since it is covered elswehere, other than to present it as a brief video supercut which will soon be posted here:
+This document will not go in-depth about the cluster creation workflow itself, since it is covered elsewhere, other than to present it as a brief video supercut which will soon be posted here:
 
 \[TODO: Add Video for "Create the Cluster" with Terraform and AKS]
 
@@ -46,15 +46,19 @@ Oh no... we've got `/opt/local-path-provisioner` and a GUID generator, somebody 
 
 ### Local Path Provisioner
 
-We can use kubectl, kustomize, or helm to install the [Local Path Provisioner](https://github.com/rancher/local-path-provisioner). The amount of time we saved making this choice has easily paid for the decision, as it is the choice for our staging cluster, where an outage or fault is implicitly without cost. It does not make backup and restore any harder, in fact this actually makes things much easier, as we can simply [take a periodic copy](https://medium.com/swlh/using-rclone-on-linux-to-automate-backups-to-google-drive-d599b49c42e8) of the directories in `/opt/local-path-provisioner` following that we are done. Almost...
+We can use kubectl, kustomize, or helm to install the [Local Path Provisioner](https://github.com/rancher/local-path-provisioner). The amount of time we saved making this choice has easily paid for the decision, as it is the choice for our staging cluster, where an outage or fault is implicitly without cost. It does not make backup and restore any harder, in fact this actually makes things much easier, as we can simply [take a periodic copy](https://medium.com/swlh/using-rclone-on-linux-to-automate-backups-to-google-drive-d599b49c42e8) of the directories in `/opt/local-path-provisioner` and following that, we are done with disaster recovery prep work. Almost...
 
 The local-path StorageClass is enabled on our cluster, and it uses the `WaitForFirstConsumer` volume binding mode.
 
 This means that persistent volumes will not be filled by the provisioner before a pod is scheduled, so a claim can be located on the same node as the pod. This means that pods with persistent volume attachments are bound to a given node "forever" – or as long as the PV is persisted there.
 
-They cannot be quickly migrated from one node to another, as their dynamic assignments have been statically bound. This is a limitation we are prepared to accept in our Home Lab.
+They cannot be quickly migrated from one node to another, as their dynamic assignments have been statically bound. This is a limitation we are prepared to accept in our Home Lab. It is not a good solution for production, (but we get there when we get there!)
+
+\[TODO: BREAKOUT - A note about a convention used in this runbook. Contrary choices made for Production environments are always presented later, at the bottom of each page. We should be in Staging before we are in Production, so that is the order we talk about them in this book.]
 
 This means that when we backup and restore our staging cluster, we do need to take care that volumes are restored to the same node where they were backed up, or else these static bindings are updated so that pods can be rescheduled and newly bound to wherever the restored data has been recovered.
+
+But if we are backing up and restoring our staging cluster, we are either tilting at windmills or have made some poor decisions, because backup and restore operations are for production. In staging, we will instead prefer to simply Retain the volumes, and prevent them from being deleted. If they host important persistent data, then there should always be a plan to reproduce it from scratch because this is Staging.
 
 ### Kubeadm
 
@@ -66,7 +70,9 @@ When cluster creation and deletion is used by robotic processes, like a pull-req
 
 ### VCluster + K3s
 
-[VCluster](https://www.vcluster.com/) is a virtual Kubernetes cluster that runs inside a regular namespace, and we decided this was a good choice for our staging "pet" environments as well as for ephemeral clusters. It has a fast lifecycle for iterating quickly on the design of this disaster recovery guide. If your cluster takes longer to provision and destroy, then you will certainly do it with a lesser frequency.
+[VCluster](https://www.vcluster.com/) is a virtual Kubernetes cluster that runs inside a regular namespace, and we decided this was a good choice for our staging "pet" environments as well as for ephemeral clusters. The goal was to keep important parts hermetic, like the Harbor instance and localized S3-compatible storage buckets; they should be easy to back up and restore, or create from scratch. There is no retention requirement for our Harbor instance, (we'd just prefer to keep it rather than wiping and reconfiguring every time that Staging is recreated.)
+
+VCluster has a fast lifecycle workflow for iterating quickly on the design of this disaster recovery guide. If your cluster takes longer to provision and destroy, then you will certainly do it with a lesser frequency. We want to encourage our dev team to destroy and recreate staging frequently, so it will be less painful whenever we need to repeat this process in production.
 
 We needed to know that we could delete and recreate clusters smoothly in order to produce this demo, and that meant we'd be destroying a lot of test environments! VCluster was more practical for testing; we went from a weekly drill with our staging cluster, to this example disaster recovery trial that works from end-to-end in less than 5 minutes.
 
