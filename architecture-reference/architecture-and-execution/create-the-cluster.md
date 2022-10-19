@@ -24,7 +24,7 @@ In the terraform plan linked above, there are (`aks-cluster-1.tf`, `aks-cluster-
 
 It is mostly derived from the [Provision an AKS Cluster guide](https://learn.hashicorp.com/tutorials/terraform/aks) provided by Hashicorp Learn.
 
-**The **_**resource group**_** is configured to** [**prevent destroy**](https://github.com/kingdonb/learn-terraform-provision-aks-cluster/blob/8e11ac597a91296a5ed5c1943c4787c5be02601d/azure-rg.tf#L7-L9)**,** which could be important later on. (_Hint:_ since our persistent volumes are in a resource group, destroying the resource group could wipe the persistent volume data and even snapshot data, making DR even just a bit more difficult.)
+**The \_resource group**\_\*\* is configured to\*\* [**prevent destroy**](https://github.com/kingdonb/learn-terraform-provision-aks-cluster/blob/8e11ac597a91296a5ed5c1943c4787c5be02601d/azure-rg.tf#L7-L9)**,** which could be important later on. (_Hint:_ since our persistent volumes are in a resource group, destroying the resource group could wipe the persistent volume data and even snapshot data, making DR even just a bit more difficult.)
 
 This document will not go in-depth about the cluster creation workflow itself, since it is covered elsewhere, other than to present it as a brief video supercut which will soon be posted here:
 
@@ -50,7 +50,7 @@ We can use kubectl, kustomize, or helm to install the [Local Path Provisioner](h
 
 The local-path StorageClass is enabled on our cluster, and it uses the `WaitForFirstConsumer` volume binding mode.
 
-This means that persistent volumes will not be filled by the provisioner before a pod is scheduled, so a claim can be located on the same node as the pod. This means that pods with persistent volume attachments are bound to a given node "forever" – or as long as the PV is persisted there.
+This means that persistent volumes will not be filled by the provisioner before a pod is scheduled, so a claim can be located on the same node as the pod. This means that pods with persistent volume attachments are bound to a given node "forever" – or as long as the PV is persisted there.
 
 They cannot be quickly migrated from one node to another, as their dynamic assignments have been statically bound. This is a limitation we are prepared to accept in our Home Lab. It is not a good solution for production, (but we get there when we get there!)
 
@@ -76,7 +76,9 @@ VCluster has a fast lifecycle workflow for iterating quickly on the design of th
 
 We needed to know that we could delete and recreate clusters smoothly in order to produce this demo, and that meant we'd be destroying a lot of test environments! VCluster was more practical for testing; we went from a weekly drill with our staging cluster, to this example disaster recovery trial that works from end-to-end in less than 5 minutes.
 
-\[TODO: Supercut video of 5-minute disaster recovery, with the slow parts sped up a bit]
+{% embed url="https://www.youtube.com/watch?v=1ehRYlsKhYM" %}
+Supercut - Disaster Recovery in Staging with FluxCD
+{% endembed %}
 
 We've got this supercut that shows the whole thing in under 45 seconds, but it should be clear from watching that this is a non-trivial cluster with more than just a handful of demo-app services and production-targeted services across a wide variety of Cloud Native vendors and projects.
 
